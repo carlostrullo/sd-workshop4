@@ -1,0 +1,45 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.ssh.insert_key = false
+  
+  config.vm.define :centos_server do |server|
+    server.vm.box = "centos1706_v0.2.0_rabbitmq_sensu_guestadditions"
+    server.vm.network :private_network, ip: "192.168.56.104"
+    server.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "1024","--cpus", "1", "--name", "centos_client_dos" ]
+    end
+    server.vm.provision "shell", inline: <<-SHELL
+ 
+  yum install -y wget unzip
+  wget https://bootstrap.pypa.io/get-pip.py -P /tmp
+  python /tmp/get-pip.py
+  wget https://releases.hashicorp.com/consul/1.0.0/consul_1.0.0_linux_amd64.zip -P /tmp
+  unzip /tmp/consul_1.0.0_linux_amd64.zip -d /tmp
+  mv /tmp/consul /usr/bin
+  mkdir /etc/consul.d
+  mkdir -p /etc/consul/data
+
+  adduser consul
+  passwd consul
+  chown -R consul:consul /etc/consul
+  chown -R consul:consul /etc/consul.d
+
+  firewall-cmd --zone=public --add-port=8301/tcp --permanent
+  firewall-cmd --reload
+
+  firewall-cmd --zone=public --add-port=8080/tcp --permanent
+  firewall-cmd --reload
+
+  adduser microservices
+  passwd microservices
+   
+  pip install flask
+  
+
+    SHELL
+  end
+end
